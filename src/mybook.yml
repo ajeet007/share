@@ -1,0 +1,9 @@
+- hosts: zabbix_agent
+  remote_user: root
+  tasks:
+    - name: add group
+      group: name=zabbixuser state=present
+    - name: Add deployment user
+      action: user name=zabbixuser group=zabbixuser state=present
+    - name: Creates directory
+      file: path=/home/zabbixuser/zabbix owner=zabbixuser group=zabbixuser state=directory
