@@ -1,0 +1,54 @@
+- hosts: zabbix_agent
+  remote_user: root
+  vars:
+    agent_folder: /home/zabbixuser/zabbix
+    zabbix_agent_archive_64: zabbix_agents_3.0.4.linux2_6_23.amd64.tar.gz
+    zabbix_agent_archive_32: zabbix_agents_3.0.4.linux2_6_23.i386.tar.gz
+    zabbix_agent: "{{agent_folder}}/agent_3.0.4"
+  tasks:
+    - name: Creates user
+      user: name=zabbixuser comment="zabbix user"
+    - name: Creates directory
+      file: path=/home/zabbixuser/zabbix owner=zabbixuser group=zabbixuser state=directory
+    - name: Creates agent directory
+      file: path=/home/zabbixuser/zabbix/agent_3.0.4 owner=zabbixuser group=zabbixuser state=directory
+    - name: create agent configration directory
+      file: path=/etc/zabbix/ owner=zabbixuser group=zabbixuser state=directory
+    - block:
+        - name: unarchive 32 bit
+          unarchive: src=/root/zabbix/{{zabbix_agent_archive_32}} dest={{zabbix_agent}}
+      when: ansible_userspace_bits == "32"
+    - block:
+        - name: unarchive 64 bit
+          unarchive: src=/root/zabbix/{{zabbix_agent_archive_64}} dest={{zabbix_agent}}
+      when: ansible_userspace_bits == "64"
+#zabbix_agentd.conf
+    - name: copy config file
+      copy: src={{agent_folder}}/agent_3.0.4/conf/zabbix_agentd.conf dest=/usr/local/etc remote_src=true mode=755
+#copy zabbix_agentd
+    - name: copy agent to execution directory
+      copy: src={{agent_folder}}/agent_3.0.4/sbin/zabbix_agentd dest=/usr/sbin remote_src=true mode=755
+    - name: copy zabbix_get
+      copy: src={{agent_folder}}/agent_3.0.4/bin/zabbix_get dest=/usr/bin remote_src=true mode=755
+    - name: copy  zabbix_sender
+      copy: dest=/usr/bin  src={{agent_folder}}/agent_3.0.4/bin/zabbix_sender remote_src=true mode=755
+#configration
+    - name: zabbix server configration
+      lineinfile: dest=/usr/local/etc/zabbix_agentd.conf regexp="^Server=127.0.0.1" line=Server=172.18.251.158
+    - name: zabbix agent active check
+      lineinfile: dest=/usr/local/etc/zabbix_agentd.conf regexp="^ServerActive=127.0.0.1" line=ServerActive=172.18.251.158
+    - name: PID file configration
+      lineinfile: dest=/usr/local/etc/zabbix_agentd.conf regexp="^# PidFile=/tmp/zabbix_agentd.pid" line=PidFile=/tmp/zabbix_agentd.pid
+    - name: log file configration
+      lineinfile: dest=/usr/local/etc/zabbix_agentd.conf regexp="^LogFile=/tmp/zabbix_agentd.log" line=LogFile=/tmp/zabbix_agentd.log
+    - name: Creates user
+      user: name=zabbix comment="to run zabbix agent"
+#services
+    - block:
+        - name: copy upstart service file
+          copy: dest=/etc/init.d/zabbix-agent  src=/root/share/zabbix-agent mode=755
+      when: ansible_service_mgr == "upstart"
+    - block:
+        - name: copy systemd service file
+          copy: dest=/usr/lib/systemd/system/zabbix-agent.service  src=/root/share/zabbix-agent.service mode=755
+      when: ansible_service_mgr == "systemd"

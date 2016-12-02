@@ -1,0 +1,6 @@
+# vars file for zabbix.agent
+
+agent_folder: /home/zabbixuser/zabbix
+zabbix_agent_archive_64: zabbix_agents_3.0.4.linux2_6_23.amd64.tar.gz
+zabbix_agent_archive_32: zabbix_agents_3.0.4.linux2_6_23.i386.tar.gz
+zabbix_agent: "{{agent_folder}}/agent_3.0.4"
